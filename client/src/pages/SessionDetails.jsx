@@ -49,7 +49,7 @@ export default function SessionDetails() {
     try {
       setLoading(true);
       setError('');
-      const response = await fetch(`https://assistly-p527.onrender.com/api/agent/sessions/details/${sessionId}`, {
+      const response = await fetch(`http://65.2.35.4:3001/api/agent/sessions/details/${sessionId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const resData = await response.json();
@@ -76,7 +76,7 @@ export default function SessionDetails() {
     setSavingNotes(true);
 
     try {
-      const response = await fetch(`https://assistly-p527.onrender.com/api/agent/sessions/notes/${sessionId}`, {
+      const response = await fetch(`http://65.2.35.4:3001/api/agent/sessions/notes/${sessionId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -32,7 +32,7 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       setError('');
-      const response = await fetch('https://assistly-p527.onrender.com/api/admin/metrics', {
+      const response = await fetch('http://65.2.35.4:3001/api/admin/metrics', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -56,7 +56,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const response = await fetch(`https://assistly-p527.onrender.com/api/agent/sessions/end/${sessionId}`, {
+      const response = await fetch(`http://65.2.35.4:3001/api/agent/sessions/end/${sessionId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });

@@ -41,7 +41,7 @@ export default function AgentDashboard() {
   const fetchSessions = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://assistly-p527.onrender.com/api/agent/sessions', {
+      const response = await fetch('http://65.2.35.4:3001/api/agent/sessions', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.status === 401) {
@@ -65,7 +65,7 @@ export default function AgentDashboard() {
     setError('');
 
     try {
-      const response = await fetch('https://assistly-p527.onrender.com/api/agent/sessions', {
+      const response = await fetch('http://65.2.35.4:3001/api/agent/sessions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
