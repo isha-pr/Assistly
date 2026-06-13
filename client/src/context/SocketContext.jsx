@@ -41,6 +41,7 @@ export function SocketProvider({ children }) {
   const nameRef = useRef(null);
   const roleRef = useRef(null);
   const joinedRef = useRef(false);
+  const pendingProducersRef = useRef([]);
 
   // Initialize socket
   useEffect(() => {
@@ -91,6 +92,9 @@ export function SocketProvider({ children }) {
       console.log(`New producer detected: ${producerId} (${kind}) from ${socketId}`);
       if (recvTransportRef.current) {
         await consumeProducer(producerId);
+      } else {
+        console.log(`Recv transport not ready. Queuing producer: ${producerId}`);
+        pendingProducersRef.current.push(producerId);
       }
     });
 
@@ -239,6 +243,15 @@ export function SocketProvider({ children }) {
               await consumeProducer(producerId);
             }
           }
+        }
+
+        // Also consume any producers that were queued while setting up
+        if (pendingProducersRef.current.length > 0) {
+          console.log(`Consuming queued producers:`, pendingProducersRef.current);
+          for (const producerId of pendingProducersRef.current) {
+            await consumeProducer(producerId);
+          }
+          pendingProducersRef.current = [];
         }
       } catch (err) {
         console.error('Error loading mediasoup device/transports:', err);

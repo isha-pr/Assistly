@@ -36,6 +36,9 @@ export default function CallInterface() {
   const [chatLog, setChatLog] = useState([]);
   const chatEndRef = useRef(null);
 
+  // Call termination state
+  const [callEndedState, setCallEndedState] = useState(null); // 'ended' | 'left' | null
+
   // Session info
   const [sessionInfo, setSessionInfo] = useState(null);
 
@@ -46,6 +49,13 @@ export default function CallInterface() {
 
   // Live session duration timer
   const [durationSeconds, setDurationSeconds] = useState(0);
+  const [hasPeerJoined, setHasPeerJoined] = useState(false);
+
+  useEffect(() => {
+    if (peers.length > 0) {
+      setHasPeerJoined(true);
+    }
+  }, [peers]);
 
   useEffect(() => {
     let interval = null;
@@ -93,6 +103,9 @@ export default function CallInterface() {
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch((err) => {
+        console.warn("Failed to play remote video stream:", err);
+      });
     }
   }, [remoteStream]);
 
@@ -118,9 +131,15 @@ export default function CallInterface() {
     });
 
     socket.on('call-ended', () => {
-      alert('The support session has been ended by the agent.');
-      leaveCall();
-      navigate('/login');
+      if (role === 'agent') {
+        alert('The support session has been ended.');
+        leaveCall();
+        navigate('/dashboard');
+      } else {
+        alert('The support session has been ended by the agent.');
+        leaveCall();
+        setCallEndedState('ended');
+      }
     });
 
     return () => {
@@ -283,14 +302,76 @@ export default function CallInterface() {
       } catch (err) {
         console.error('Failed to end session on server:', err);
       }
-    }
-    leaveCall();
-    if (role === 'agent') {
+      leaveCall();
       navigate('/dashboard');
     } else {
-      navigate('/login');
+      leaveCall();
+      setCallEndedState('left');
     }
   };
+
+  // Compute dynamic waiting overlay details based on peer status
+  const remotePeer = peers.find((p) => p.role !== role);
+  const isPeerDisconnected = remotePeer?.isDisconnected;
+  const hasPeerLeft = hasPeerJoined && !remotePeer;
+
+  const getWaitingStatusHeader = () => {
+    if (isPeerDisconnected) {
+      return role === 'agent' ? 'Customer disconnected...' : 'Support agent disconnected...';
+    }
+    if (hasPeerLeft) {
+      return role === 'agent' ? 'Customer has left the call' : 'Support agent has left the call';
+    }
+    return role === 'agent' ? 'Waiting for customer to connect...' : 'Waiting for support agent...';
+  };
+
+  const getWaitingStatusSubtext = () => {
+    if (isPeerDisconnected) {
+      return 'The other participant disconnected temporarily. Attempting to reconnect the feed within the 30-second window...';
+    }
+    if (hasPeerLeft) {
+      return 'The other participant has left this support call.';
+    }
+    return 'Once the other participant connects and shares their camera feed, the live stream will automatically load here.';
+  };
+
+  if (callEndedState) {
+    return (
+      <div className="h-screen bg-gray-900 flex items-center justify-center text-white p-6">
+        <div className="w-full max-w-md bg-gray-800 rounded-2xl shadow-xl border border-gray-700 p-8 text-center space-y-6">
+          <div className="w-20 h-20 bg-primary/10 border border-primary/20 text-primary rounded-full flex items-center justify-center text-4xl mx-auto">
+            {callEndedState === 'ended' ? '🏁' : '👋'}
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-gray-100">
+              {callEndedState === 'ended' ? 'Session Completed' : 'You Left the Call'}
+            </h2>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              {callEndedState === 'ended'
+                ? 'The support agent has closed this support session. Thank you for using AssistLy!'
+                : 'You have left the support call. Thank you for using AssistLy!'}
+            </p>
+          </div>
+          <div className="bg-gray-900/60 border border-gray-750 p-4 rounded-xl text-left space-y-2 text-xs text-gray-400">
+            <div className="flex justify-between">
+              <span>Session ID:</span>
+              <span className="font-mono text-gray-200">{sessionId}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Duration:</span>
+              <span className="font-mono text-gray-200">{formatDuration(durationSeconds)}</span>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/')}
+            className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl shadow-md transition-all duration-200"
+          >
+            Go to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-gray-900 flex flex-col text-white overflow-hidden">
@@ -381,15 +462,14 @@ export default function CallInterface() {
           
           {/* Main Remote Screen */}
           <div className="w-full h-full relative rounded-2xl overflow-hidden bg-gray-950 flex items-center justify-center border border-gray-850 shadow-inner">
-            {remoteStream ? (
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                className="remote-video-element w-full h-full object-cover"
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center p-8 max-w-md text-center space-y-6">
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              className={`remote-video-element w-full h-full object-cover ${remoteStream ? 'block' : 'hidden'}`}
+            />
+            {!remoteStream && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-8 max-w-md mx-auto text-center space-y-6 z-10">
                 <div className="relative flex items-center justify-center w-24 h-24">
                   {/* Pulsing ring animations */}
                   <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping"></div>
@@ -401,16 +481,16 @@ export default function CallInterface() {
                 <div className="space-y-2">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-orange-500/10 text-primary border border-primary/20">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                    Awaiting Remote Connection
+                    {isPeerDisconnected ? 'Connection Alert' : 'Awaiting Remote Connection'}
                   </span>
                   <h3 className="text-xl font-bold text-gray-200">
-                    {role === 'agent' ? 'Waiting for customer to connect...' : 'Waiting for support agent...'}
+                    {getWaitingStatusHeader()}
                   </h3>
                   <p className="text-sm text-gray-400 max-w-xs mx-auto leading-relaxed">
-                    Once the other participant connects and shares their camera feed, the live stream will automatically load here.
+                    {getWaitingStatusSubtext()}
                   </p>
                 </div>
-                {role === 'agent' && (
+                {role === 'agent' && !hasPeerLeft && (
                   <div className="bg-gray-900/60 border border-gray-800 p-4 rounded-xl w-full text-left space-y-2">
                     <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">Quick Link for Customer</div>
                     <div className="flex gap-2">
