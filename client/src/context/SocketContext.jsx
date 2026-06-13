@@ -36,6 +36,12 @@ export function SocketProvider({ children }) {
   const [errorMsg, setErrorMsg] = useState(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
 
+  // Refs to keep track of room details for auto-reconnect
+  const sessionIdRef = useRef(null);
+  const nameRef = useRef(null);
+  const roleRef = useRef(null);
+  const joinedRef = useRef(false);
+
   // Initialize socket
   useEffect(() => {
     const s = io(SERVER_URL);
@@ -43,6 +49,27 @@ export function SocketProvider({ children }) {
 
     s.on('connect', () => {
       console.log('Socket.IO connected to server');
+      if (joinedRef.current && sessionIdRef.current) {
+        console.log('Socket reconnected. Auto-rejoining session:', sessionIdRef.current);
+        s.emit(
+          'join-room',
+          {
+            sessionId: sessionIdRef.current,
+            name: nameRef.current,
+            role: roleRef.current,
+          },
+          (response) => {
+            if (response.error) {
+              console.error('Failed to auto-rejoin room after reconnect:', response.error);
+            } else {
+              console.log('Successfully auto-rejoined room after reconnect');
+              if (response.peers) {
+                setPeers(response.peers);
+              }
+            }
+          }
+        );
+      }
     });
 
     s.on('connect_error', (err) => {
@@ -87,19 +114,25 @@ export function SocketProvider({ children }) {
     // Listen for peer join/leave events
     socket.on('peer-joined', ({ socketId, name, role }) => {
       console.log(`Peer joined: ${name} (${role})`);
-      setPeers((prev) => [...prev.filter((p) => p.socketId !== socketId), { socketId, name, role }]);
+      setPeers((prev) => [...prev.filter((p) => p.socketId !== socketId), { socketId, name, role, isDisconnected: false }]);
     });
 
     socket.on('peer-disconnected', ({ socketId, name }) => {
       console.log(`Peer temporarily disconnected: ${name}`);
+      setPeers((prev) =>
+        prev.map((p) => (p.socketId === socketId ? { ...p, isDisconnected: true } : p))
+      );
+      setRemoteStream(null);
     });
 
-    socket.on('peer-reconnected', ({ socketId, oldSocketId, name }) => {
-      console.log(`Peer reconnected: ${name}`);
+    socket.on('peer-reconnected', ({ socketId, oldSocketId, name, role }) => {
+      console.log(`Peer reconnected: ${name} (${role})`);
       setPeers((prev) => [
         ...prev.filter((p) => p.socketId !== oldSocketId && p.socketId !== socketId),
-        { socketId, name, role: 'customer' }
+        { socketId, name, role, isDisconnected: false }
       ]);
+      // Restore remote stream
+      updateRemoteStream();
     });
 
     socket.on('peer-left', ({ socketId, name }) => {
@@ -115,6 +148,8 @@ export function SocketProvider({ children }) {
       socket.off('new-producer');
       socket.off('producer-closed');
       socket.off('peer-joined');
+      socket.off('peer-disconnected');
+      socket.off('peer-reconnected');
       socket.off('peer-left');
     };
   }, [socket]);
@@ -143,6 +178,10 @@ export function SocketProvider({ children }) {
     if (!socket) return;
     setConnecting(true);
     setErrorMsg(null);
+
+    sessionIdRef.current = sessionId;
+    nameRef.current = name;
+    roleRef.current = role;
 
     // Get User Media first (optional but recommended to establish permissions early)
     let stream;
@@ -190,14 +229,16 @@ export function SocketProvider({ children }) {
         await createRecvTransport(sessionId);
 
         setJoined(true);
+        joinedRef.current = true;
         setConnecting(false);
 
         // After setting up recv transport, consume any existing producers in the room
         for (const peer of response.peers) {
-          // Request server to notify us of their producers, or just request consumption
-          // In a simple 1:1, we can trigger consumption as soon as we detect producers.
-          // The backend sends 'new-producer' events when anyone starts producing,
-          // and we will query or consume when we connect.
+          if (peer.producers) {
+            for (const producerId of peer.producers) {
+              await consumeProducer(producerId);
+            }
+          }
         }
       } catch (err) {
         console.error('Error loading mediasoup device/transports:', err);
@@ -303,7 +344,7 @@ export function SocketProvider({ children }) {
       return;
     }
 
-    const sessionId = socket.io.opts.query?.sessionId || ''; // fallback or fetch room context
+    const sessionId = sessionIdRef.current || '';
     
     socket.emit(
       'consume',
@@ -398,6 +439,7 @@ export function SocketProvider({ children }) {
     setLocalStream(null);
     setRemoteStream(null);
     setJoined(false);
+    joinedRef.current = false;
     setPeers([]);
   };
 

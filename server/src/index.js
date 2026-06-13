@@ -431,11 +431,11 @@ io.on('connection', (socket) => {
       socket.join(sessionId);
 
       // Notify other peers in the room about reconnection
-      socket.to(sessionId).emit('peer-reconnected', { socketId: socket.id, oldSocketId, name });
+      socket.to(sessionId).emit('peer-reconnected', { socketId: socket.id, oldSocketId, name, role });
 
       const peers = Object.values(room.participants)
         .filter((p) => p.id !== socket.id)
-        .map((p) => ({ socketId: p.id, name: p.name, role: p.role }));
+        .map((p) => ({ socketId: p.id, name: p.name, role: p.role, producers: Object.keys(p.producers) }));
 
       return callback({
         routerRtpCapabilities: room.router.rtpCapabilities,
@@ -491,7 +491,7 @@ io.on('connection', (socket) => {
     // Return the current list of other participants to the joining client
     const peers = Object.values(room.participants)
       .filter((p) => p.id !== socket.id)
-      .map((p) => ({ socketId: p.id, name: p.name, role: p.role }));
+      .map((p) => ({ socketId: p.id, name: p.name, role: p.role, producers: Object.keys(p.producers) }));
 
     callback({
       routerRtpCapabilities: room.router.rtpCapabilities,
@@ -688,6 +688,47 @@ io.on('connection', (socket) => {
     }
     
     socket.to(data.sessionId).emit('new-message', data);
+  });
+
+  // Handle explicit leave-call
+  socket.on('leave-call', () => {
+    console.log(`User left call explicitly: ${socket.id}`);
+    
+    // Log participant leave time in MongoDB
+    if (socket.participantDbId) {
+      Participant.findByIdAndUpdate(socket.participantDbId, { leftAt: new Date() })
+        .catch(err => console.error('Failed to log participant exit in MongoDB:', err));
+    }
+
+    // Clean up from rooms
+    for (const [sessionId, room] of Object.entries(rooms)) {
+      if (room.participants && room.participants[socket.id]) {
+        const participant = room.participants[socket.id];
+        
+        // Clear any disconnect timers
+        if (participant.disconnectTimer) {
+          clearTimeout(participant.disconnectTimer);
+        }
+
+        // Clean up transports, producers, and consumers
+        for (const producer of Object.values(participant.producers)) {
+          producer.close();
+        }
+        for (const consumer of Object.values(participant.consumers)) {
+          consumer.close();
+        }
+        for (const transport of Object.values(participant.transports)) {
+          transport.close();
+        }
+
+        delete room.participants[socket.id];
+        
+        // Broadcast immediate leave
+        io.to(sessionId).emit('peer-left', { socketId: socket.id, name: participant.name });
+        
+        break;
+      }
+    }
   });
 
   // Disconnection cleanup
