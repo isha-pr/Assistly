@@ -12,7 +12,7 @@ export default function AgentLogin() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/public/stats')
+     fetch('https://assistly-p527.onrender.com/api/public/stats')
       .then((res) => res.json())
       .then((data) => {
         setStats({
@@ -29,7 +29,7 @@ export default function AgentLogin() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3001/api/auth/login', {
+      const response = await fetch('https://assistly-p527.onrender.com/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

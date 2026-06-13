@@ -99,7 +99,7 @@ export default function CallInterface() {
   // Fetch session details from backend
   const fetchSessionDetails = async () => {
     try {
-      const response = await fetch(`http://localhost:3001/api/sessions/validate/${sessionId}`);
+      const response = await fetch(`https://assistly-p527.onrender.com/api/sessions/validate/${sessionId}`);
       const data = await response.json();
       if (response.ok) {
         setSessionInfo(data);
@@ -161,7 +161,7 @@ export default function CallInterface() {
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://localhost:3001/api/sessions/upload', {
+      const response = await fetch('https://assistly-p527.onrender.com/api/sessions/upload', {
         method: 'POST',
         body: formData,
       });
@@ -276,7 +276,7 @@ export default function CallInterface() {
     stopRecording();
     if (role === 'agent') {
       try {
-        await fetch(`http://localhost:3001/api/agent/sessions/end/${sessionId}`, {
+        await fetch(`https://assistly-p527.onrender.com/api/agent/sessions/end/${sessionId}`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${localStorage.getItem('agentToken')}` },
         });

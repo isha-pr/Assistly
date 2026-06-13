@@ -17,7 +17,7 @@ export default function CustomerJoin() {
     try {
       setLoading(true);
       setError('');
-      const response = await fetch(`http://localhost:3001/api/sessions/validate/${sessionId}`);
+      const response = await fetch(`https://assistly-p527.onrender.com/api/sessions/validate/${sessionId}`);
       const data = await response.json();
       
       if (!response.ok) {

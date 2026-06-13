@@ -41,7 +41,7 @@ export default function AgentDashboard() {
   const fetchSessions = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/api/agent/sessions', {
+      const response = await fetch('https://assistly-p527.onrender.com/api/agent/sessions', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.status === 401) {
@@ -65,7 +65,7 @@ export default function AgentDashboard() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3001/api/agent/sessions', {
+      const response = await fetch('https://assistly-p527.onrender.com/api/agent/sessions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -332,7 +332,7 @@ export default function AgentDashboard() {
 
                           <div className="flex flex-col sm:flex-row gap-2.5 min-w-[200px]">
                             <button
-                              onClick={() => copyToClipboard(`http://localhost:5173/join/${session.sessionId}`)}
+                              onClick={() => copyToClipboard(`${window.location.origin}/join/${session.sessionId}`)}
                               className="flex-1 bg-white hover:bg-gray-50 border border-gray-300 text-gray-750 text-xs font-medium py-2 rounded-lg transition-all"
                             >
                               Copy invite link
