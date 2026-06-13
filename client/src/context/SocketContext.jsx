@@ -8,7 +8,7 @@ export function useSocket() {
   return useContext(SocketContext);
 }
 
-const SERVER_URL = 'http://localhost:3001';
+const SERVER_URL = 'https://assistly-p527.onrender.com';
 
 export function SocketProvider({ children }) {
   const [socket, setSocket] = useState(null);
