@@ -1,1 +1,1 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://YOUR-TUNNEL-SUBDOMAIN.trycloudflare.com';
+export const API_BASE_URL = 'https://bullet-extended-tale-breach.trycloudflare.com';
