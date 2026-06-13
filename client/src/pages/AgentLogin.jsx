@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import supportBg from '../assets/support_background.png';
+import { API_BASE_URL } from '../config';
 
 export default function AgentLogin() {
   const [email, setEmail] = useState('agent@assistly.com');
@@ -12,7 +13,7 @@ export default function AgentLogin() {
   const navigate = useNavigate();
 
   useEffect(() => {
-     fetch('http://65.2.35.4:3001/api/public/stats')
+     fetch(`${API_BASE_URL}/api/public/stats`)
       .then((res) => res.json())
       .then((data) => {
         setStats({
@@ -29,7 +30,7 @@ export default function AgentLogin() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://65.2.35.4:3001/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
+import { API_BASE_URL } from '../config';
 
 export default function CallInterface() {
   const { sessionId } = useParams();
@@ -113,7 +114,7 @@ export default function CallInterface() {
   // Fetch session details from backend
   const fetchSessionDetails = async () => {
     try {
-      const response = await fetch(`http://65.2.35.4:3001/api/sessions/validate/${sessionId}`);
+      const response = await fetch(`${API_BASE_URL}/api/sessions/validate/${sessionId}`);
       const data = await response.json();
       if (response.ok) {
         setSessionInfo(data);
@@ -181,7 +182,7 @@ export default function CallInterface() {
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://65.2.35.4:3001/api/sessions/upload', {
+      const response = await fetch(`${API_BASE_URL}/api/sessions/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -296,7 +297,7 @@ export default function CallInterface() {
     stopRecording();
     if (role === 'agent') {
       try {
-        await fetch(`http://65.2.35.4:3001/api/agent/sessions/end/${sessionId}`, {
+        await fetch(`${API_BASE_URL}/api/agent/sessions/end/${sessionId}`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${localStorage.getItem('agentToken')}` },
         });

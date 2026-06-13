@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
+import { API_BASE_URL } from '../config';
 
 export default function AdminDashboard() {
   const [metrics, setMetrics] = useState(null);
@@ -32,7 +33,7 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       setError('');
-      const response = await fetch('http://65.2.35.4:3001/api/admin/metrics', {
+      const response = await fetch(`${API_BASE_URL}/api/admin/metrics`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -56,7 +57,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const response = await fetch(`http://65.2.35.4:3001/api/agent/sessions/end/${sessionId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/agent/sessions/end/${sessionId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import io from 'socket.io-client';
 import * as mediasoupClient from 'mediasoup-client';
+import { API_BASE_URL } from '../config';
 
 const SocketContext = createContext(null);
 
@@ -8,7 +9,7 @@ export function useSocket() {
   return useContext(SocketContext);
 }
 
-const SERVER_URL = 'http://65.2.35.4:3001';
+const SERVER_URL = API_BASE_URL;
 
 export function SocketProvider({ children }) {
   const [socket, setSocket] = useState(null);

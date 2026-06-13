@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
+import { API_BASE_URL } from '../config';
 
 export default function AgentDashboard() {
   const [searchParams] = useSearchParams();
@@ -41,7 +42,7 @@ export default function AgentDashboard() {
   const fetchSessions = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://65.2.35.4:3001/api/agent/sessions', {
+      const response = await fetch(`${API_BASE_URL}/api/agent/sessions`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.status === 401) {
@@ -65,7 +66,7 @@ export default function AgentDashboard() {
     setError('');
 
     try {
-      const response = await fetch('http://65.2.35.4:3001/api/agent/sessions', {
+      const response = await fetch(`${API_BASE_URL}/api/agent/sessions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

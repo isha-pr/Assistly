@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 export default function CustomerJoin() {
   const { sessionId } = useParams();
@@ -17,7 +18,7 @@ export default function CustomerJoin() {
     try {
       setLoading(true);
       setError('');
-      const response = await fetch(`http://65.2.35.4:3001/api/sessions/validate/${sessionId}`);
+      const response = await fetch(`${API_BASE_URL}/api/sessions/validate/${sessionId}`);
       const data = await response.json();
       
       if (!response.ok) {
