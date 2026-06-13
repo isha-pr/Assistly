@@ -89,6 +89,7 @@ export function SocketProvider({ children }) {
 
     // Listen for new producers in the room
     socket.on('new-producer', async ({ socketId, producerId, kind }) => {
+      console.log(`[DEBUG CLIENT] new-producer event received for producerId=${producerId} kind=${kind} from socketId=${socketId}`);
       console.log(`New producer detected: ${producerId} (${kind}) from ${socketId}`);
       if (recvTransportRef.current) {
         await consumeProducer(producerId);
@@ -160,6 +161,7 @@ export function SocketProvider({ children }) {
 
   // Helper to re-generate the remote stream from active consumers
   const updateRemoteStream = () => {
+    console.log('[DEBUG CLIENT] updateRemoteStream called');
     const stream = new MediaStream();
     let hasTracks = false;
     
@@ -170,6 +172,7 @@ export function SocketProvider({ children }) {
       }
     });
 
+    console.log(`[DEBUG CLIENT] remoteStream updating. hasTracks=${hasTracks} tracksCount=${stream.getTracks().length}`);
     if (hasTracks) {
       setRemoteStream(stream);
     } else {
@@ -194,6 +197,7 @@ export function SocketProvider({ children }) {
         video: true,
         audio: true,
       });
+      console.log('[DEBUG CLIENT] getUserMedia success, stream tracks:', stream.getTracks().map(t => t.kind));
       setLocalStream(stream);
       setMicActive(true);
       setCamActive(true);
@@ -263,11 +267,13 @@ export function SocketProvider({ children }) {
 
   // 2. Create local Send Transport
   const createSendTransport = async (sessionId, stream) => {
+    console.log('[DEBUG CLIENT] createSendTransport started');
     return new Promise((resolve, reject) => {
       socket.emit('createWebRtcTransport', { sessionId, direction: 'send' }, async (response) => {
         if (response.error) {
           return reject(new Error(response.error));
         }
+        console.log('[DEBUG CLIENT] createSendTransport params received, local transport initialized');
 
         try {
           const transport = deviceRef.current.createSendTransport(response.params);
@@ -285,11 +291,13 @@ export function SocketProvider({ children }) {
           });
 
           transport.on('produce', async ({ kind, rtpParameters }, callback, errback) => {
+            console.log(`[DEBUG CLIENT] sendTransport on('produce') triggered for kind=${kind}`);
             socket.emit(
               'produce',
               { sessionId, transportId: transport.id, kind, rtpParameters },
               (res) => {
                 if (res.error) return errback(new Error(res.error));
+                console.log(`[DEBUG CLIENT] produce response received from server. producerId=${res.id}`);
                 callback({ id: res.id });
               }
             );
@@ -318,11 +326,13 @@ export function SocketProvider({ children }) {
 
   // 3. Create local Recv Transport
   const createRecvTransport = async (sessionId) => {
+    console.log('[DEBUG CLIENT] createRecvTransport started');
     return new Promise((resolve, reject) => {
       socket.emit('createWebRtcTransport', { sessionId, direction: 'recv' }, async (response) => {
         if (response.error) {
           return reject(new Error(response.error));
         }
+        console.log('[DEBUG CLIENT] createRecvTransport params received, local transport initialized');
 
         try {
           const transport = deviceRef.current.createRecvTransport(response.params);
@@ -350,6 +360,7 @@ export function SocketProvider({ children }) {
 
   // 4. Consume a specific remote Producer
   const consumeProducer = async (producerId) => {
+    console.log(`[DEBUG CLIENT] consumeProducer called for producerId=${producerId}`);
     if (!socket || !recvTransportRef.current || !deviceRef.current) return;
     
     // Check if we are already consuming this producer
@@ -373,6 +384,7 @@ export function SocketProvider({ children }) {
           return;
         }
 
+        console.log(`[DEBUG CLIENT] consume response received for producerId=${producerId} consumerId=${response.id}`);
         console.log('Received consume params:', response);
 
         try {
@@ -383,11 +395,14 @@ export function SocketProvider({ children }) {
             rtpParameters: response.rtpParameters,
           });
 
+          console.log(`[DEBUG CLIENT] local consumer created successfully for consumerId=${consumer.id}`);
           consumersRef.current[consumer.id] = consumer;
 
           // Resume consumer on server
+          console.log(`[DEBUG CLIENT] resumeConsumer emit for consumerId=${consumer.id}`);
           socket.emit('resumeConsumer', { sessionId, consumerId: consumer.id }, () => {
             console.log(`Consumer ${consumer.id} resumed on server`);
+            console.log(`[DEBUG CLIENT] resumeConsumer response received from server for consumerId=${consumer.id}`);
             updateRemoteStream();
           });
         } catch (err) {

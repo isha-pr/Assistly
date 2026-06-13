@@ -380,6 +380,7 @@ io.on('connection', (socket) => {
 
   // Join Room
   socket.on('join-room', async ({ sessionId, name, role }, callback) => {
+    console.log(`[DEBUG SERVER] join-room received from socket=${socket.id} for sessionId=${sessionId} role=${role} name=${name}`);
     console.log(`User ${name} joining room ${sessionId} as ${role}`);
     
     let room = rooms[sessionId];
@@ -414,6 +415,7 @@ io.on('connection', (socket) => {
 
     if (existingDisconnected) {
       const [oldSocketId, participant] = existingDisconnected;
+      console.log(`[DEBUG SERVER] join-room restoring participant socket=${socket.id} oldSocketId=${oldSocketId}`);
       console.log(`Restoring disconnected participant: ${name}`);
       clearTimeout(participant.disconnectTimer);
       
@@ -437,6 +439,7 @@ io.on('connection', (socket) => {
         .filter((p) => p.id !== socket.id)
         .map((p) => ({ socketId: p.id, name: p.name, role: p.role, producers: Object.keys(p.producers) }));
 
+      console.log(`[DEBUG SERVER] join-room callback completed (restored) for socket=${socket.id}`);
       return callback({
         routerRtpCapabilities: room.router.rtpCapabilities,
         peers,
@@ -493,6 +496,7 @@ io.on('connection', (socket) => {
       .filter((p) => p.id !== socket.id)
       .map((p) => ({ socketId: p.id, name: p.name, role: p.role, producers: Object.keys(p.producers) }));
 
+    console.log(`[DEBUG SERVER] join-room callback completed for socket=${socket.id}`);
     callback({
       routerRtpCapabilities: room.router.rtpCapabilities,
       peers,
@@ -508,6 +512,7 @@ io.on('connection', (socket) => {
 
   // Create WebRTC Transport
   socket.on('createWebRtcTransport', async ({ sessionId, direction }, callback) => {
+    console.log(`[DEBUG SERVER] createWebRtcTransport received from socket=${socket.id} direction=${direction} sessionId=${sessionId}`);
     console.log(`Creating WebRTC transport for socket ${socket.id} in direction ${direction}`);
     const room = rooms[sessionId];
     if (!room) return callback({ error: 'Session not found' });
@@ -520,6 +525,7 @@ io.on('connection', (socket) => {
         participant.transports[transport.id] = transport;
       }
 
+      console.log(`[DEBUG SERVER] createWebRtcTransport success for socket=${socket.id} transportId=${transport.id}`);
       callback({ params });
     } catch (err) {
       console.error('Failed to create WebRTC transport:', err);
@@ -550,6 +556,7 @@ io.on('connection', (socket) => {
 
   // Produce Media
   socket.on('produce', async ({ sessionId, transportId, kind, rtpParameters }, callback) => {
+    console.log(`[DEBUG SERVER] produce received from socket=${socket.id} kind=${kind} transportId=${transportId} sessionId=${sessionId}`);
     console.log(`Produce media (${kind}) request from socket ${socket.id}`);
     const room = rooms[sessionId];
     if (!room) return callback({ error: 'Session not found' });
@@ -566,6 +573,7 @@ io.on('connection', (socket) => {
       participant.producers[producer.id] = producer;
 
       // Notify other peers in the room about this new producer
+      console.log(`[DEBUG SERVER] new-producer emit to room=${sessionId} for socket=${socket.id} producerId=${producer.id} kind=${producer.kind}`);
       socket.to(sessionId).emit('new-producer', {
         socketId: socket.id,
         producerId: producer.id,
@@ -579,6 +587,7 @@ io.on('connection', (socket) => {
         delete participant.producers[producer.id];
       });
 
+      console.log(`[DEBUG SERVER] produce success for socket=${socket.id} producerId=${producer.id}`);
       callback({ id: producer.id });
     } catch (err) {
       console.error('Failed to produce media:', err);
@@ -588,6 +597,7 @@ io.on('connection', (socket) => {
 
   // Consume Media
   socket.on('consume', async ({ sessionId, transportId, producerId, rtpCapabilities }, callback) => {
+    console.log(`[DEBUG SERVER] consume received from socket=${socket.id} producerId=${producerId} transportId=${transportId} sessionId=${sessionId}`);
     console.log(`Consume media request for producer ${producerId} from socket ${socket.id}`);
     const room = rooms[sessionId];
     if (!room) return callback({ error: 'Session not found' });
@@ -638,6 +648,7 @@ io.on('connection', (socket) => {
         delete participant.consumers[consumer.id];
       });
 
+      console.log(`[DEBUG SERVER] consumer created success for socket=${socket.id} consumerId=${consumer.id} producerId=${producerId}`);
       callback({
         id: consumer.id,
         producerId,
@@ -652,6 +663,7 @@ io.on('connection', (socket) => {
 
   // Resume Consumer
   socket.on('resumeConsumer', async ({ sessionId, consumerId }, callback) => {
+    console.log(`[DEBUG SERVER] resumeConsumer received from socket=${socket.id} consumerId=${consumerId} sessionId=${sessionId}`);
     console.log(`Resume consumer request: ${consumerId}`);
     const room = rooms[sessionId];
     if (!room) return callback({ error: 'Session not found' });
@@ -664,6 +676,7 @@ io.on('connection', (socket) => {
 
     try {
       await consumer.resume();
+      console.log(`[DEBUG SERVER] resumeConsumer success for socket=${socket.id} consumerId=${consumerId}`);
       callback({});
     } catch (err) {
       console.error('Failed to resume consumer:', err);
@@ -692,6 +705,7 @@ io.on('connection', (socket) => {
 
   // Handle explicit leave-call
   socket.on('leave-call', () => {
+    console.log(`[DEBUG SERVER] leave-call received from socket=${socket.id}`);
     console.log(`User left call explicitly: ${socket.id}`);
     
     // Log participant leave time in MongoDB
@@ -724,6 +738,7 @@ io.on('connection', (socket) => {
         delete room.participants[socket.id];
         
         // Broadcast immediate leave
+        console.log(`[DEBUG SERVER] peer-left emit to room=${sessionId} for socket=${socket.id} name=${participant.name}`);
         io.to(sessionId).emit('peer-left', { socketId: socket.id, name: participant.name });
         
         break;
@@ -733,6 +748,7 @@ io.on('connection', (socket) => {
 
   // Disconnection cleanup
   socket.on('disconnect', async () => {
+    console.log(`[DEBUG SERVER] disconnect received from socket=${socket.id}`);
     console.log(`Socket disconnected: ${socket.id}`);
     
     // Log participant leave time in MongoDB

@@ -101,6 +101,7 @@ export default function CallInterface() {
 
   // Assign remote stream to video element
   useEffect(() => {
+    console.log(`[DEBUG CLIENT] useEffect[remoteStream] remoteVideoRef.current exists=${!!remoteVideoRef.current} remoteStream exists=${!!remoteStream}`);
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
       remoteVideoRef.current.play().catch((err) => {
@@ -362,12 +363,21 @@ export default function CallInterface() {
               <span className="font-mono text-gray-200">{formatDuration(durationSeconds)}</span>
             </div>
           </div>
-          <button
-            onClick={() => navigate('/')}
-            className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl shadow-md transition-all duration-200"
-          >
-            Go to Home
-          </button>
+          {role === 'agent' ? (
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl shadow-md transition-all duration-200"
+            >
+              Go to Dashboard
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate(`/join/${sessionId}`)}
+              className="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl shadow-md transition-all duration-200"
+            >
+              Rejoin Support Call
+            </button>
+          )}
         </div>
       </div>
     );
