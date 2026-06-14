@@ -1,1 +1,1 @@
-export const API_BASE_URL = 'https://rain-largest-retirement-communities.trycloudflare.com';
+export const API_BASE_URL = 'https://assistly-p527.onrender.com';
